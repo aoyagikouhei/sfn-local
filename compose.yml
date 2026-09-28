@@ -1,0 +1,28 @@
+# 開発環境の定義。今は dev（toolbox）だけ。直接は呼ばず tools/dev.sh から使う（下の ${DEV_*} などは tools/dev.sh が export する）。
+# ${VAR:?} は使わない。使わないサービスの補間エラーでも compose 全体が止まる。
+name: sfn-local
+
+services:
+  dev:
+    # タグは tools/toolbox/Dockerfile の sha256 の先頭 12 桁。Dockerfile を変えると次の run で作り直される。
+    image: sfn-local-toolbox:${TOOLBOX_TAG}
+    build:
+      context: tools/toolbox
+    # 手元に無いタグを docker.io に取りに行かず、そのまま build する。
+    pull_policy: never
+    # bash が PID 1 だと SIGINT を無視するので、init を PID 1 に置く。
+    init: true
+    # 作ったファイル（target など）をホストのユーザーの持ち物にする。
+    user: "${DEV_UID}:${DEV_GID}"
+    working_dir: ${DEV_CWD}
+    environment:
+      HOME: ${DEV_REPO}/.toolbox/home
+      CARGO_HOME: ${DEV_REPO}/.toolbox/cargo
+      # ホストの target/ と分ける（ホスト製の古いバイナリを黙って起動しないため）。
+      CARGO_TARGET_DIR: ${DEV_REPO}/.toolbox/target
+      # passwd に uid の行が無いので、名前を環境変数で渡す。
+      USER: ${DEV_USER}
+      LOGNAME: ${DEV_USER}
+    volumes:
+      # リポジトリはホストと同じ絶対パスに置く（compose の相対 bind がホストのパスで解決されるため）。
+      - ${DEV_REPO}:${DEV_REPO}
