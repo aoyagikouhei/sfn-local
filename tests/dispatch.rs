@@ -5,25 +5,20 @@ mod common;
 use common::Harness;
 use serde_json::json;
 
-const OPERATIONS: &[&str] = &[
-    "CreateStateMachine",
-    "DescribeStateMachine",
+const NOT_IMPLEMENTED: &[&str] = &[
     "UpdateStateMachine",
     "DeleteStateMachine",
-    "ListStateMachines",
-    "StartExecution",
     "StartSyncExecution",
-    "DescribeExecution",
     "StopExecution",
     "ListExecutions",
     "GetExecutionHistory",
 ];
 
 #[tokio::test]
-async fn 既知のオペレーションはまだ未実装のエラーを返す() {
+async fn まだ無いオペレーションは未実装のエラーを返す() {
     let harness = Harness::start().await;
 
-    for operation in OPERATIONS {
+    for operation in NOT_IMPLEMENTED {
         let reply = harness
             .post(Some(&format!("AWSStepFunctions.{operation}")), "{}")
             .await;
@@ -62,6 +57,23 @@ async fn 知らないオペレーションは_unknown_operation_exception() {
             reply.body,
             json!({ "__type": "UnknownOperationException" }),
             "{target:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn 本文が読めなければ_serialization_exception() {
+    let harness = Harness::start().await;
+
+    for body in ["{", "[]", r#"{"stateMachineArn": 1}"#] {
+        let reply = harness
+            .post(Some("AWSStepFunctions.StartExecution"), body)
+            .await;
+        assert_eq!(reply.status, 400, "{body}");
+        assert_eq!(
+            reply.body,
+            json!({ "__type": "SerializationException" }),
+            "{body}"
         );
     }
 }

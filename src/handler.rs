@@ -9,15 +9,18 @@ use axum::http::HeaderMap;
 use axum::response::Response;
 
 use crate::config::Config;
+use crate::engine::lambda::Lambda;
 use crate::operation;
 use crate::response::bare_error;
+use crate::store::Store;
 
 const TARGET_PREFIX: &str = "AWSStepFunctions.";
 
 #[derive(Clone)]
 pub struct App {
-    #[allow(dead_code)] // オペレーションの実装で使う。
     pub config: Arc<Config>,
+    pub store: Arc<Store>,
+    pub lambda: Arc<Lambda>,
 }
 
 /// ヘッダが無い・前置き `AWSStepFunctions.` が無い・名前が違うときは `UnknownOperationException` の 400。
